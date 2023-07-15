@@ -1,22 +1,26 @@
 const baseUrl ="http://localhost:3000";
-
+  let fileInputCheck = document.getElementById('file');
+  let fileInputHours = document.getElementById('file1');
+  let fileListDiv = document.getElementById('fileList');
  // 获取loading元素
  let loadingElement = document.getElementById('loading');
 // 获取提交元素
-let submitBtn = document.getElementById('submit');
-  submitBtn.addEventListener("click",function(){
-    uploadFiles();
+let submitCheckBtn = document.getElementById('submitcheck');
+let submitHoursBtn = document.getElementById('submithours');
+  submitCheckBtn.addEventListener("click",function(){
+      uploadFiles(fileInputCheck,'mul','check');
+    })
+
+  submitHoursBtn.addEventListener("click",function(){
+    uploadFiles(fileInputHours,'single','hours');
   })
 
-  let fileInput = document.getElementById('file');
-  let fileListDiv = document.getElementById('fileList');
-
-fileInput.addEventListener('change', function() {
+  fileInputCheck.addEventListener('change', function() {
     // 清空文件列表
     fileListDiv.innerHTML = '';
 
     // 获取选择的文件列表
-    let fileList = fileInput.files;
+    let fileList = fileInputCheck.files;
 
     // 遍历文件列表并展示文件名
     for (let i = 0; i < fileList.length; i++) {
@@ -31,24 +35,26 @@ fileInput.addEventListener('change', function() {
 });
 
 
-  function uploadFiles() {
-    let fileInput = document.getElementById('file');
-    let files = fileInput.files;
+  function uploadFiles(dom,num,url) {
+    let files = dom.files;
     let formData = new FormData();
-   if(files.length == 0){
-    alert('请选择文件');
-    return;
+   if(num === 'mul'){
+    if(files.length == 0){
+      alert('请选择文件');
+      return;
+     }
+    if(files.length == 1){
+      alert('请选择至少2个文件');
+      return;
+     }
    }
-   if(files.length == 1){
-    alert('请选择至少2个文件');
-    return;
-   }
+   
    showLoading();// 上传动画
     for (let i = 0; i < files.length; i++) {
       formData.append('files', files[i]);
     }
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', baseUrl+'/api/upload');
+    xhr.open('POST', baseUrl+'/api/upload/'+url);
     xhr.send(formData);
 
     xhr.onreadystatechange = function() {
@@ -67,7 +73,7 @@ fileInput.addEventListener('change', function() {
           var uploadFailModal = document.getElementById('uploadFail');
           uploadFailModal.style.display = 'block';
           const timerId1 = setTimeout(() => {
-            location.reload();
+            // location.reload()
           }, 1000);
         }
       }
@@ -91,5 +97,22 @@ function closeModal() {
     uploadSuccessModal.style.display = 'none';
     uploadFailModal.style.display = 'none';
 }
+
+// 左侧菜单的点击事件
+const menuItems = document.querySelectorAll('.sidebar a');
+const contentDivs = document.querySelectorAll('.content div');
+menuItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const target = item.getAttribute('data-target');
+    menuItems.forEach(item => item.classList.remove('active'));
+    item.classList.add('active');
+    contentDivs.forEach(div => div.classList.remove('active'));
+    document.getElementById(target).classList.add('active');
+  });
+});
+
+
+
+
 
 

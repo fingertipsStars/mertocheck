@@ -8,26 +8,52 @@
     <title>首页</title>
 </head>
 <body>
-    <h1>周期绩效表格上传</h1>
-    <div class="file-upload">
-      <label for="file">选择文件:</label>
-      <input type="file" id="file" name="file" accept=".xlsx, .xls" multiple>
-      <div id="fileList" class="fileList"></div>
-      <button id="submit">上传文件</button>
+  <div class="main-content">
+    <div class="sidebar"> 
+      <ul>
+        <li><a href="#" class="active" data-target="content1">绩效</a></li>
+        <li><a href="#" data-target="content2">考勤</a></li>
+      </ul>
     </div>
+    
+    <div class="content">
+      <!-- 内容区域内容 -->
+      <div id="content1" class="active">
+        <h1>周期绩效表格上传</h1>
+        <div class="file-upload">
+          <label for="file">选择文件:</label>
+          <input type="file" id="file" name="file" accept=".xlsx, .xls" multiple>
+          <div id="fileList" class="fileList"></div>
+          <button id="submitcheck">上传文件</button>
+        </div>
+      </div>
+      <div id="content2">
+        <h1>当月班表上传</h1>
+        <div class="file-upload">
+          <label for="file1">选择文件:</label>
+          <input type="file" id="file1" name="file" accept=".xlsx, .xls">
+          <div id="fileList" class="fileList"></div>
+          <button id="submithours">上传文件</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  
+    
     <div id="uploadSuccess" class="modal">
       <div class="modal-content success">
-          <p>文件上传成功！</p>
+          <p>上传成功！</p>
       </div>
   </div>
   <div id="uploadFail" class="modal">
       <div class="modal-content fail">
-          <p>文件上传失败！</p>
+          <p>上传失败！</p>
       </div>
   </div>
     <div id="loading" class="loading">
       <div class="loading-spinner"></div>
-      <div class="loading-text">系统正在冲刺，稍等。。。。。</div>
+      <div class="loading-text">上传中，稍等。。。。。</div>
     </div>
     <script src="/js/index.js"></script>
 </body>

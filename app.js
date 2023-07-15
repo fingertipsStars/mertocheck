@@ -8,9 +8,26 @@ var fs = require('fs');
 const ExcelJS = require('exceljs');
 const nodeXlxs = require("node-xlsx");
 let setMonth = new Date().getMonth() + 1;
+let currentYear = new Date().getFullYear();
 const port = 3000;
+// 绩效的excel表头
 let newExcelHeader = ['序号','工号','姓名','车站/队/组','日期','事件内容','考核条款','考核分值','检查人','总分','员工签字'];
+// 绩效excel 标题
 let newExcelTitle = '站务车间杨湾中心站'+ setMonth +'月份月度绩效考核汇总';
+// 考勤excel标题名称
+let newExcelHoursTitle = `洛阳轨道交通集团有限责任公司运营分公司${currentYear}年${setMonth}月考勤表`;
+// 考勤的excel部分表头
+let newExcelHoursBefore = ['序号','工号','日期    姓名','班组','岗位'];
+// 考勤的excel部分表头
+let newExcelHoursBack = [
+  '实际出勤(h)','标准工时(h)',	'超缺工时(h)',	'法定节假日加班小时',	'倒班人员必填  夜班(个)',	'员工签名',	'休息',	
+  '调休假',	'迟到',	'早退 平时',	'旷工'	,'培训'	,'出差'	,'丧假'	,'病假'	,'婚假',	'年休假',	'事假'	,'产假',	'孕检假'	,'工伤假',	'陪护假',
+  	'节育假',	'哺乳时间',	'备注'];
+// 夜班上班情况统计汇总表
+let nightTitle = `${currentYear}年${setMonth}月站务车间夜班上班情况统计汇总表`;
+let nightExcelHeader = [ "序号",	"部门",	"工号",	"姓名",	"科室/车间",	"岗位",	`${setMonth}月夜班次数`	,`${setMonth}月夜班上班时间`];
+let maxMonth = [1,3,5,7,8,10,12];
+let formalMonth = [4,6,9,11];
 
 // 设置静态文件目录
 app.use(express.static('public'));
@@ -39,8 +56,8 @@ app.get('/', (req, res) => {
   res.render('index');
 });
   
-// POST接口示例
-app.post('/api/upload', upload.any(),(req, res) => {
+// POST接口(绩效)
+app.post('/api/upload/check', upload.any(),(req, res) => {
   // console.log(req.files)
   let sheets = [];
   let sheetData = req.files;
@@ -52,7 +69,7 @@ app.post('/api/upload', upload.any(),(req, res) => {
     }
   }
   
-  // 在这里处理接收到的数据
+  // 处理接收到的数据
   // console.log(sheets);
   let todoData = [];
   let totalData = [];
@@ -112,7 +129,7 @@ app.post('/api/upload', upload.any(),(req, res) => {
   }
 // 创建一个新的工作簿
 const workbook = new ExcelJS.Workbook();
-// 添加一个工作表
+// 添加一个工作表  绩效表
 const worksheet = workbook.addWorksheet('Sheet1');
 // 设置表头
 worksheet.addRow([newExcelTitle]);
@@ -253,17 +270,418 @@ worksheet.getCell('A1').font = { name: 'Arial',bold: true, size: 20 }; // 设置
     }
   });
 // 保存工作簿为Excel文件
-workbook.xlsx.writeFile('output.xlsx')
+workbook.xlsx.writeFile(`杨湾中心站${setMonth}月绩效.xlsx`)
   .then(() => {
-    console.log('Excel文件已生成');
+    console.log('绩效Excel文件已生成');
     res.status(200).send({ message: 'upload successful' });
   })
   .catch((error) => {
-    console.log('生成Excel文件时出错：', error);
-    res.status(404).send({ message: 'upload error' });
+    console.log('生成绩效Excel文件时出错：', error);
+    res.status(404).send({ message: 'upload check error' });
   });
   
 });
+// 考勤接口
+app.post('/api/upload/hours', upload.any(),(req, res) => {
+  // console.log(req.files)
+  let sheets = [];
+  let sheetData = req.files;
+  if(sheetData.length && sheetData.length <=1){
+    sheets = nodeXlxs.parse(sheetData[0].buffer);
+  }else{
+    for(let i = 0;i < sheetData.length;i++){
+      sheets.push(nodeXlxs.parse(sheetData[i].buffer))
+    }
+  }
+  
+  // 处理接收到的数据
+  // console.log(sheets);
+  let todoData = [];
+  let newtodoData = [];
+  // sheets.forEach(function(sheet,index){
+    let singleSheet = sheets[0];
+      if( singleSheet['name'] == 'Sheet1'){
+        for(let rowId in singleSheet['data']){
+          // 每一行数据
+          let newRow = singleSheet['data'][rowId];
+          if(newRow.length > 7){
+            // console.log(newRow)
+            todoData.push(newRow);
+          }
+        }
+      }
+  // })
+// 创建一个新的工作簿
+const workbook = new ExcelJS.Workbook();
+// 添加一个工作表   考勤表
+const worksheet = workbook.addWorksheet('Sheet1');
+ // 添加一个工作表   夜班统计表
+ const nightworksheet = workbook.addWorksheet('Sheet2');
+
+// 夜班统计表设置表头
+nightworksheet.addRow([nightTitle]);
+nightworksheet.addRow(nightExcelHeader);
+
+// 考勤表设置表头
+let newExcelHoursMid=[];
+
+// 添加数据到工作表
+todoData.shift()
+todoData.forEach(function(rowData,index) {
+  if(index == 0){
+    newExcelHoursMid = rowData.splice(5,rowData.length-1);
+  }else{
+    // 换位置
+    let temp = rowData[1];
+    rowData[1] = rowData[3];
+    rowData[3] = temp;
+    let temp1 = rowData[2];
+    rowData[2] = rowData[4];
+    rowData[4] = temp1;
+  }
+});
+for(let q = 0;q < newExcelHoursMid.length;q++){
+  newExcelHoursMid[q] = newExcelHoursMid[q]+"";
+  newExcelHoursMid[q] = newExcelHoursMid[q].replace("号", ""); //将ele中的所有号去掉
+}
+
+let tempHeader = newExcelHoursBefore.concat(newExcelHoursMid).concat(newExcelHoursBack)
+worksheet.addRow([newExcelHoursTitle]);
+worksheet.addRow(tempHeader);
+// 先构造数组，在改变数组对应的白夜年为数字
+for (let k = 1; k < todoData.length; k++) {
+  if(k == 0){
+    newtodoData.push(todoData[k].splice(5,todoData[k].length-1));
+  }else{
+    newtodoData.push(todoData[k]);
+    newtodoData.push(todoData[k]);
+  }
+}
+let nightNum = 0;//夜班个数
+let yearNum = 0;//年假个数
+let marriageNum = 0;//婚假个数
+let nightArr = [];
+for (let n = 0; n < newtodoData.length; n++) {
+  nightNum = 0;
+  yearNum = 0;
+  marriageNum = 0;
+  if(newtodoData[n].length){
+    let nightObj = {};
+    nightObj.yearRange = [];
+    nightObj.nightRange = [];
+    if (n % 2 == 0) {
+      for(let m = 0; m < newtodoData[n].length; m++){
+        if((newtodoData[n][m]+"").indexOf("A2") != -1 || (newtodoData[n][m]+"").indexOf("B2") != -1 || (newtodoData[n][m]+"").indexOf("C2") != -1 || (newtodoData[n][m]+"").indexOf("D2") != -1 || (newtodoData[n][m]+"").indexOf("E2") != -1 ){
+          nightNum++;
+          nightObj.nightRange.push(m - 4);
+        }
+        if((newtodoData[n][m]+"").indexOf("年") != -1 ){
+          yearNum++;
+          nightObj.yearRange.push(m - 4);
+        }
+
+        if((newtodoData[n][m]+"").indexOf("婚") != -1 ){
+          marriageNum++;
+        }
+        newtodoData[n][m] = (newtodoData[n][m]+"").indexOf("A1") != -1 || (newtodoData[n][m]+"").indexOf("B1") != -1 || (newtodoData[n][m]+"").indexOf("C1") != -1 || (newtodoData[n][m]+"").indexOf("D1") != -1 || (newtodoData[n][m]+"").indexOf("E1") != -1 ? "白" : (newtodoData[n][m]+"").indexOf("A2") != -1 || (newtodoData[n][m]+"").indexOf("B2") != -1 || (newtodoData[n][m]+"").indexOf("C2") != -1 || (newtodoData[n][m]+"").indexOf("D2") != -1 || (newtodoData[n][m]+"").indexOf("E2") != -1 ? "夜" : newtodoData[n][m] == "Z" ? "日" : newtodoData[n][m] == "调" ? "":newtodoData[n][m];
+      }
+      nightObj.id = newtodoData[n][1];
+      nightObj.night = nightNum;
+      nightObj.year = yearNum;
+      nightObj.name = newtodoData[n][2];
+      nightObj.job = newtodoData[n][4];
+      nightObj.marry = marriageNum;
+      
+      nightArr.push(nightObj);
+    }
+    
+    if(n % 2 != 0){
+      for(let m = 0; m < newtodoData[n].length; m++){
+         newtodoData[n][m] = newtodoData[n][m] == "白" || newtodoData[n][m] == "夜"  ? 12 : newtodoData[n][m] == "日" ? 8 : newtodoData[n][m] == "年" ? 8 :newtodoData[n][m] == "产检" ? 8 :newtodoData[n][m];
+      }
+    }
+    worksheet.addRow(newtodoData[n]);
+  }
+}
+// 设置合并单元格
+worksheet.mergeCells('A1:BH1');//表头合并
+  // 循环遍历数组处理（合并单元格）
+  let mergeStartRow = 3;
+  let mergeEndRow = 3;
+  let index = 1;//初始序号
+  changeInfo(newtodoData);
+  function changeInfo(arr){
+    for (let i = 0; i < arr.length - 1; i++) {
+        if (arr[i][1] == arr[i + 1][1]) {
+          mergeEndRow++;
+        }else{
+          index++;
+          if (mergeStartRow !== mergeEndRow) {
+            myMerge(mergeStartRow,mergeEndRow);
+          }
+          mergeStartRow = mergeEndRow + 1;
+          mergeEndRow++;
+        }
+         // 获取合并单元格的主单元格
+         const mainCellOrder = worksheet.getCell(`A${mergeStartRow}`);
+         // 修改主单元格的内容
+         mainCellOrder.value = index;
+    }
+    if (arr[arr.length - 2][1] == arr[arr.length - 1][1]) {
+      myMerge(mergeStartRow,mergeEndRow);
+    }
+    
+  }
+
+  // merge单元格
+  function myMerge(start,end){
+    worksheet.mergeCells(`A${start}:A${end}`); // 合并单元格
+    worksheet.mergeCells(`B${start}:B${end}`); // 合并单元格
+    worksheet.mergeCells(`C${start}:C${end}`); // 合并单元格
+    worksheet.mergeCells(`D${start}:D${end}`); 
+    worksheet.mergeCells(`E${start}:E${end}`); 
+    worksheet.mergeCells(`AJ${start}:AJ${end}`); 
+    worksheet.mergeCells(`AK${start}:AK${end}`); 
+    worksheet.mergeCells(`AL${start}:AL${end}`); 
+    worksheet.mergeCells(`AM${start}:AM${end}`); 
+    worksheet.mergeCells(`AN${start}:AN${end}`); 
+    worksheet.mergeCells(`AO${start}:AO${end}`); 
+    worksheet.mergeCells(`AP${start}:AP${end}`); 
+    worksheet.mergeCells(`AQ${start}:AQ${end}`); 
+    worksheet.mergeCells(`AR${start}:AR${end}`); 
+    worksheet.mergeCells(`AS${start}:AS${end}`); 
+    worksheet.mergeCells(`AT${start}:AT${end}`); 
+    worksheet.mergeCells(`AU${start}:AU${end}`); 
+    worksheet.mergeCells(`AV${start}:AV${end}`); 
+    worksheet.mergeCells(`AW${start}:AW${end}`); 
+    worksheet.mergeCells(`AX${start}:AX${end}`); 
+    worksheet.mergeCells(`AY${start}:AY${end}`); 
+    worksheet.mergeCells(`AZ${start}:AZ${end}`); 
+    worksheet.mergeCells(`BA${start}:BA${end}`); 
+    worksheet.mergeCells(`BB${start}:BB${end}`); 
+    worksheet.mergeCells(`BC${start}:BC${end}`); 
+    worksheet.mergeCells(`BD${start}:BD${end}`); 
+    worksheet.mergeCells(`BE${start}:BE${end}`); 
+    worksheet.mergeCells(`BF${start}:BF${end}`); 
+    worksheet.mergeCells(`BG${start}:BG${end}`); 
+    worksheet.mergeCells(`BH${start}:BH${end}`); 
+    worksheet.mergeCells(`BI${start}:BI${end}`); 
+  }
+
+  
+
+// 根据单元格内容设置单元格样式
+let reality = 0;//实际出勤
+let realNight;
+let realYear;
+let realMarry;
+worksheet.eachRow(function(row, rowNumber) {
+  row.height = null; // 设置行的高度为自动
+  reality = 0;
+  row.eachCell(function(cell, colNumber) {
+    // 设置所有单元格的对齐方式为居中并自动换行
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    // 判断单元格内容是否符合条件
+    if ((cell.value == '年'|| (cell.value+"").indexOf('病') != -1) && rowNumber > 2 && colNumber > 5) {
+      // 修改单元格背景色
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: {argb: 'FF00B04E'} // 使用红色作为背景色
+      };
+    }
+    if (cell.value == '产检'|| (cell.value+"").indexOf('婚') != -1 && rowNumber > 2 && colNumber > 5) {
+      // 修改单元格背景色
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: {argb: 'FFFF0000'} // 使用红色作为背景色
+      };
+    }
+    // 计算实际出勤
+    if(colNumber > 5 && rowNumber > 2 && (cell.value == 8 || cell.value == 12 || cell.value == 4)){
+      reality+=Number(cell.value);
+    }
+     // 计算夜班个数
+    //  if(colNumber > 5 && rowNumber > 2 && rowNumber %2 != 0 && cell.value == "夜"){
+    //   nightNum++;
+    // }
+    for(let i = 0;i < nightArr.length;i++){
+      if(cell.value == nightArr[i].id){
+        realNight = nightArr[i].night;
+        realYear = nightArr[i].year;
+        realMarry = nightArr[i].marry;
+      }
+    }
+  });
+  
+   // 获取实际出勤的单元格
+   const realCellOrder = worksheet.getCell(`AJ${rowNumber}`);
+  //  获取标准工时单元格
+   const standardCellOrder = worksheet.getCell(`AK${rowNumber}`);
+    //  获取超缺工时单元格
+    const oversizeCellOrder = worksheet.getCell(`AL${rowNumber}`);
+     //  获取夜班单元格
+     const nightCellOrder = worksheet.getCell(`AN${rowNumber}`);
+      //  获取年休假单元格
+      const yearCellOrder = worksheet.getCell(`AZ${rowNumber}`);
+       //  获取婚假单元格
+       const marryCellOrder = worksheet.getCell(`AY${rowNumber}`);
+  // 从第三行开始赋值，前两行为标题和表头
+   if(rowNumber > 3){
+     // 修改实际出勤单元格的内容
+     realCellOrder.value = reality;
+     // 修改夜班
+     nightCellOrder.value = realNight;
+     // 修改年休假
+     yearCellOrder.value = realYear == 0 ? "" : realYear;
+      // 修改婚假
+      marryCellOrder.value = realMarry == 0 ? "" : realMarry;
+    if(maxMonth.indexOf(setMonth) != -1){
+      standardCellOrder.value = 192;
+     } else if(formalMonth.indexOf(setMonth) != -1){
+      standardCellOrder.value = 180;
+     }else{
+      // 2月份的标准工时
+      standardCellOrder.value = 168;
+     }
+     //  超缺工时
+   oversizeCellOrder.value = reality - standardCellOrder.value;
+   }
+});
+
+// 设置单元格样式
+const mergedCell = worksheet.getCell('A1');
+mergedCell.fill = {
+  type: 'pattern',
+  pattern: 'solid'
+};
+ 
+
+// 设置列宽度
+worksheet.getColumn(1).width = 5; // 设置第1列的宽度为5
+worksheet.getColumn(2).width = 10; 
+worksheet.getColumn(3).width = 10; 
+worksheet.getColumn(4).width = 16; 
+
+worksheet.getCell('A1').font = { name: 'Arial',bold: true, size: 20 }; // 设置加粗和字体大小为12
+ // 设置某一行中多个单元格的字体样式
+ const rowIndex = 2; // 设置要修改的行的索引
+ const font = {
+   name: 'Arial',
+   size: 11,
+   bold: true,
+  //  color: { argb: 'FF0000FF' }
+ };
+ const row = worksheet.getRow(rowIndex);
+ row.eachCell(function(cell) {
+   cell.font = font;
+ });
+  // 设置所有数据行的边框为黑色
+  worksheet.eachRow(function(row, rowNumber) {
+    if (rowNumber > 1) { // 跳过标题行
+      row.border = {
+        top: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        right: { style: 'thin', color: { argb: 'FF000000' } }
+      };
+    }
+  });
+
+// 添加数据到工作表
+let orderNum = 1;
+for (let n = 0; n < nightArr.length; n++) {
+      let temrarr = [];
+      temrarr.push(orderNum);
+      temrarr.push("客运部");
+      temrarr.push(nightArr[n].id);
+      temrarr.push(nightArr[n].name);
+      temrarr.push("站务车间1号线");
+      temrarr.push(nightArr[n].job);
+      temrarr.push(nightArr[n].night);
+      if(nightArr[n].nightRange.length){
+        let tempele = nightArr[n].nightRange;
+        let tempLength = tempele.length;
+        for(let m = 0;m < tempLength; m++){
+          tempele[m] = setMonth + "月" + tempele[m] + "日";
+        }
+        temrarr.push(nightArr[n].nightRange);
+      }
+    nightworksheet.addRow(temrarr);
+    orderNum++;
+}
+nightworksheet.mergeCells("A1:H1"); // 合并单元格
+// 设置单元格样式
+const mergedCellNight = nightworksheet.getCell('A1');
+mergedCellNight.fill = {
+  type: 'pattern',
+  pattern: 'solid'
+};
+ 
+
+// 设置列宽度
+nightworksheet.getColumn(1).width = 10; // 设置第1列的宽度为5
+nightworksheet.getColumn(2).width = 10; 
+nightworksheet.getColumn(3).width = 10; 
+nightworksheet.getColumn(4).width = 12; 
+nightworksheet.getColumn(5).width = 26; 
+nightworksheet.getColumn(7).width = 20; 
+nightworksheet.getColumn(8).width = 40; 
+ // 设置所有单元格的对齐方式为居中并自动换行,所有行的高度
+ nightworksheet.eachRow(function(row) {
+  row.height = 40; // 设置行的高度25
+  row.eachCell(function(cell) {
+    // 去除引号和方括号
+     const oldValue = cell.value;
+     const newValue = (oldValue+"").replace(/[\[\]"]/g, ''); // 去除方括号 [] 和引号
+     cell.value = newValue;
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  });
+});
+
+
+nightworksheet.getCell('A1').font = { name: 'Arial',bold: true, size: 20 }; // 设置加粗和字体大小为12
+ // 设置某一行中多个单元格的字体样式
+ const nightRowIndex = 2; // 设置要修改的行的索引
+ const nightFont = {
+   name: 'Arial',
+   size: 14,
+  //  bold: true,
+  //  color: { argb: 'FF0000FF' }
+ };
+ const nightRow = nightworksheet.getRow(nightRowIndex);
+ nightRow.eachCell(function(cell) {
+   cell.font = nightFont;
+ });
+  // 设置所有数据行的边框为黑色
+  nightworksheet.eachRow(function(row, rowNumber) {
+    // 设置边框
+    if (rowNumber > 1) { // 跳过标题行
+      row.border = {
+        top: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        right: { style: 'thin', color: { argb: 'FF000000' } }
+      };
+    }
+  });
+
+// 保存工作簿为考勤Excel文件
+workbook.xlsx.writeFile(`杨湾中心站${setMonth}月考勤统计表.xlsx`)
+  .then(() => {
+    console.log('考勤Excel文件和夜班统计Excel已生成');
+    res.status(200).send({ message: 'upload successful' });
+  })
+  .catch((error) => {
+    console.log('生成考勤Excel文件和夜班统计Excel时出错：', error);
+    res.status(404).send({ message: 'upload hours error' });
+  });
+
+
+
+}); 
+
 // 启动服务器
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
