@@ -1,0 +1,35 @@
+# 忽略node_modules文件夹
+node_modules/
+
+# 忽略构建产物
+dist/
+build/
+
+# 忽略IDE和编辑器生成的文件
+.vscode/
+.idea/
+*.iml
+
+# 忽略日志文件
+*.log
+
+# 忽略临时文件
+*.tmp
+
+# 忽略缓存文件
+*.cache
+
+# 忽略配置文件
+.env
+
+# 忽略图片生成的缩略图
+thumbs.db
+
+# 忽略备份文件
+*.bak
+*.swp
+*~
+
+# 忽略测试相关文件
+__tests__/
+coverage/
